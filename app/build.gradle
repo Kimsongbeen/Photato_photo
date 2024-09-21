@@ -31,6 +31,17 @@ android {
 
 dependencies {
 
+    // Firebase BOM을 사용하여 버전 통일
+    implementation platform('com.google.firebase:firebase-bom:32.1.1')
+
+    // Firebase SDK 추가
+    implementation 'com.google.firebase:firebase-database:20.0.5'
+    implementation 'com.google.firebase:firebase-storage:20.0.1'
+    implementation 'com.google.firebase:firebase-auth:21.0.5'
+    implementation 'com.google.android.gms:play-services-auth:20.1.0'
+    implementation 'com.google.firebase:firebase-core:21.0.0'
+    implementation 'com.google.firebase:firebase-appcheck-playintegrity'
+
     // 네트워크 통신
     implementation 'com.squareup.retrofit2:retrofit:2.9.0'
     implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
