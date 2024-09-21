@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "252279574710",
+    "project_id": "photato-photo",
+    "storage_bucket": "photato-photo.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:252279574710:android:8d444c066581e90d201617",
+        "android_client_info": {
+          "package_name": "com.example.photato_photo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD0CMxKvlANNRn6ZuBnC33AcYXl-cse0Ys"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

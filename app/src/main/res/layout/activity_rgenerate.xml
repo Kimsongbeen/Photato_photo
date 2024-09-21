@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="top|center_horizontal">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/story"
+        android:textSize="35dp"
+        android:text="Today's Picture"/>
+
+    <Button
+        android:id="@+id/generateButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/promptInput"
+        android:layout_marginTop="16dp"
+        android:text="Generate Image" />
+
+    <Button
+        android:id="@+id/saveButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/promptInput"
+        android:layout_marginLeft="157dp"
+        android:layout_marginTop="16dp"
+        android:layout_toRightOf="@id/generateButton"
+        android:visibility="gone"
+        android:text="Save" />
+
+    <ImageView
+        android:id="@+id/imageView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/generateButton"
+        android:layout_marginTop="16dp"
+        android:scaleType="fitCenter" />
+
+
+</LinearLayout>
