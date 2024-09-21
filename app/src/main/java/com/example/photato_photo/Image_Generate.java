@@ -3,6 +3,7 @@ package com.example.photato_photo;
 import static android.content.ContentValues.TAG;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.icu.text.SimpleDateFormat;

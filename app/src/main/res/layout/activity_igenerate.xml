@@ -20,26 +20,14 @@
         android:text="Generate Image" />
 
     <Button
-        android:id="@+id/randomButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginLeft="250dp"
-        android:layout_below="@id/promptInput"
-        android:layout_marginTop="16dp"
-        android:text="Random Image" />
-
-    <Button
         android:id="@+id/saveButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignTop="@+id/imageView"
-        android:layout_alignParentEnd="true"
-        android:layout_alignParentBottom="true"
-        android:layout_marginTop="508dp"
-        android:layout_marginEnd="174dp"
-        android:layout_marginBottom="50dp"
-        android:text="Save"
-        tools:visibility="gone" />
+        android:layout_marginLeft="290dp"
+        android:layout_below="@id/promptInput"
+        android:layout_marginTop="16dp"
+        tools:visibility="gone"
+        android:text="Save" />
 
     <ImageView
         android:id="@+id/imageView"

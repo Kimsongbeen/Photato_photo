@@ -4,11 +4,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
-import android.graphics.Bitmap;
-import android.net.Uri;
 import android.os.Bundle;
-import android.provider.MediaStore;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -21,19 +17,17 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
-import com.google.firebase.storage.UploadTask;
+import com.squareup.picasso.Picasso;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 public class PostActivity extends AppCompatActivity {
 
     private EditText editTextTitle, editTextContent;
     private ImageView imageView;
     private Button buttonSelectImage, buttonSubmit;
-    private Uri imageUri;
+    private String selectedImageUrl = null;
 
     private FirebaseDatabase database;
     private DatabaseReference postsRef;
@@ -41,6 +35,7 @@ public class PostActivity extends AppCompatActivity {
     private StorageReference storageRef;
 
     private static final int PICK_IMAGE_REQUEST = 1;
+    private static final int SELECT_FIREBASE_IMAGE_REQUEST = 2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,7 +58,9 @@ public class PostActivity extends AppCompatActivity {
         buttonSelectImage.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                openFileChooser();
+                // Firebase Storage에서 이미지 선택하는 Activity로 이동
+                Intent intent = new Intent(PostActivity.this, ImageSelectionActivity.class);
+                startActivityForResult(intent, SELECT_FIREBASE_IMAGE_REQUEST);
             }
         });
 
@@ -76,25 +73,14 @@ public class PostActivity extends AppCompatActivity {
         });
     }
 
-    // 이미지 선택을 위한 파일 선택기 열기
-    private void openFileChooser() {
-        Intent intent = new Intent();
-        intent.setType("image/*");
-        intent.setAction(Intent.ACTION_GET_CONTENT);
-        startActivityForResult(intent, PICK_IMAGE_REQUEST);
-    }
-
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        if (requestCode == PICK_IMAGE_REQUEST && resultCode == RESULT_OK && data != null && data.getData() != null) {
-            imageUri = data.getData();
-            try {
-                Bitmap bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), imageUri);
-                imageView.setImageBitmap(bitmap);
-            } catch (IOException e) {
-                e.printStackTrace();
+        if (requestCode == SELECT_FIREBASE_IMAGE_REQUEST && resultCode == RESULT_OK) {
+            if (data != null && data.hasExtra("selectedImageUrl")) {
+                selectedImageUrl = data.getStringExtra("selectedImageUrl");
+                Picasso.get().load(selectedImageUrl).into(imageView);  // 선택된 이미지 표시
             }
         }
     }
@@ -104,29 +90,11 @@ public class PostActivity extends AppCompatActivity {
         final String title = editTextTitle.getText().toString().trim();
         final String content = editTextContent.getText().toString().trim();
 
-        if (imageUri != null) {
-            // 이미지 파일 Firebase Storage에 업로드
-            final StorageReference fileRef = storageRef.child("images/" + UUID.randomUUID().toString());
-
-            fileRef.putFile(imageUri)
-                    .addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
-                        @Override
-                        public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                            fileRef.getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
-                                @Override
-                                public void onSuccess(Uri uri) {
-                                    String imageUrl = uri.toString();
-                                    savePostToDatabase(title, content, imageUrl);
-                                }
-                            });
-                        }
-                    }).addOnFailureListener(new OnFailureListener() {
-                        @Override
-                        public void onFailure(@NonNull Exception e) {
-                            Toast.makeText(PostActivity.this, "이미지 업로드 실패", Toast.LENGTH_SHORT).show();
-                        }
-                    });
+        if (selectedImageUrl != null) {
+            // Firebase Storage에서 선택된 이미지 URL을 직접 데이터베이스에 저장
+            savePostToDatabase(title, content, selectedImageUrl);
         } else {
+            // 이미지가 없을 경우 null로 처리
             savePostToDatabase(title, content, null);
         }
     }

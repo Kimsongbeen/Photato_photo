@@ -16,6 +16,12 @@
             android:name=".PostAdapter"
             android:exported="false" />
         <activity
+            android:name=".ImageAdapter"
+            android:exported="false" />
+        <activity
+            android:name=".ImageSelectionActivity"
+            android:exported="false" />
+        <activity
             android:name=".BoardActivity"
             android:exported="false" />
         <activity
