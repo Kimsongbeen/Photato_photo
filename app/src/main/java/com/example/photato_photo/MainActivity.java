@@ -43,11 +43,11 @@ public class MainActivity extends AppCompatActivity {
         });
 
 
-//        editButton.setOnClickListener(v -> {
-//            Intent edit = new Intent(getApplicationContext(), Photo_Edit.class);
-//            startActivity(edit);
-//        });
-//
+        editButton.setOnClickListener(v -> {
+            Intent edit = new Intent(getApplicationContext(), EditActivity.class);
+            startActivity(edit);
+        });
+
         boardButton.setOnClickListener(v -> {
             Intent board = new Intent(getApplicationContext(), BoardActivity.class);
             startActivity(board);

@@ -31,6 +31,11 @@ android {
 
 dependencies {
 
+    // 이미지 편집
+    implementation 'androidx.activity:activity-ktx:1.7.0'
+    implementation 'androidx.fragment:fragment-ktx:1.5.7'
+    implementation 'com.github.dhaval2404:imagepicker:2.1'
+
     // Firebase BOM을 사용하여 버전 통일
     implementation platform('com.google.firebase:firebase-bom:32.1.1')
 
