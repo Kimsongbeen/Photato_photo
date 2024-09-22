@@ -6,7 +6,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 import java.util.concurrent.TimeUnit;
 
 public class UrlConfig {
-    private static final String BASE_URL = "https://1577-34-125-218-59.ngrok-free.app/";
+    private static final String BASE_URL = "https://0e44-35-203-180-15.ngrok-free.app/";
 
     private static Retrofit retrofit;
 

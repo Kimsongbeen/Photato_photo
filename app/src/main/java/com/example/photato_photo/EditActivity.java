@@ -2,6 +2,7 @@ package com.example.photato_photo;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.content.ContentValues;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
@@ -10,25 +11,34 @@ import android.graphics.Color;
 import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Paint;
+import android.graphics.drawable.BitmapDrawable;
+import android.icu.text.SimpleDateFormat;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.github.dhaval2404.imagepicker.ImagePicker;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.firebase.database.DatabaseReference;
-import com.squareup.picasso.Picasso;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.Date;
+import java.util.Locale;
 
 public class EditActivity extends AppCompatActivity {
 
@@ -37,11 +47,6 @@ public class EditActivity extends AppCompatActivity {
     private DrawView drawingView; // 사용자 정의 뷰
     private Bitmap originalBitmap;
     private Bitmap filteredBitmap; // 필터가 적용된 비트맵
-    private String selectedImageUrl = null;
-    private DatabaseReference postsRef;
-
-    private static final int PICK_IMAGE_REQUEST = 1;
-    private static final int SELECT_FIREBASE_IMAGE_REQUEST = 2;
 
     // 색상 목록
     private int currentColorIndex = 0;
@@ -55,8 +60,8 @@ public class EditActivity extends AppCompatActivity {
 
         imageView = findViewById(R.id.imageView);
         drawingView = findViewById(R.id.drawingView); // DrawView 초기화
-        Button buttonSelectImage = findViewById(R.id.choose_image);
-        Button buttonSubmit = findViewById(R.id.save_image);
+        Button selectImageButton = findViewById(R.id.choose_image);
+        Button saveButton = findViewById(R.id.save_image);
         Button filterNoneButton = findViewById(R.id.filterNoneButton);
         Button filterGrayscaleButton = findViewById(R.id.filterGrayscaleButton);
         Button filterSepiaButton = findViewById(R.id.filterSepiaButton);
@@ -82,21 +87,15 @@ public class EditActivity extends AppCompatActivity {
         filterBrightenButton.setOnClickListener(v -> applyFilter(4));
         filterDarkenButton.setOnClickListener(v -> applyFilter(5));
 
-        // 이미지 선택 버튼 클릭 리스너
-        buttonSelectImage.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // Firebase Storage에서 이미지 선택하는 Activity로 이동
-                Intent intent = new Intent(EditActivity.this, ImageSelectionActivity.class);
-                startActivityForResult(intent, SELECT_FIREBASE_IMAGE_REQUEST);
-            }
-        });
+        // 갤러리에서 이미지 선택
+        selectImageButton.setOnClickListener(v -> openGallery());
 
         // 게시글 업로드 버튼 클릭 리스너
-        buttonSubmit.setOnClickListener(new View.OnClickListener() {
+        saveButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                uploadPost();
+                saveImage();
+                saveImageToStorage(filteredBitmap);
             }
         });
 
@@ -110,6 +109,26 @@ public class EditActivity extends AppCompatActivity {
                 .compress(1024)
                 .maxResultSize(1080, 1080)
                 .start();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (resultCode == RESULT_OK && data != null) {
+            Uri pictureUri = data.getData();
+            imageView.setImageURI(pictureUri);
+            try {
+                originalBitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), pictureUri);
+                filteredBitmap = originalBitmap.copy(originalBitmap.getConfig(), true); // 필터 적용을 위한 복사본
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        } else if (resultCode == ImagePicker.RESULT_ERROR) {
+            Toast.makeText(this, ImagePicker.getError(data), Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(this, "이미지 선택이 취소되었습니다.", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void applyFilter(int filterType) {
@@ -163,55 +182,80 @@ public class EditActivity extends AppCompatActivity {
         imageView.setImageBitmap(filteredBitmap); // 필터 적용된 이미지 설정
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
+    private void saveImageToStorage(Bitmap bitmap) {
+        FirebaseStorage storage = FirebaseStorage.getInstance();
+        StorageReference storageRef = storage.getReference();
 
-        if (requestCode == SELECT_FIREBASE_IMAGE_REQUEST && resultCode == RESULT_OK) {
-            if (data != null && data.hasExtra("selectedImageUrl")) {
-                selectedImageUrl = data.getStringExtra("selectedImageUrl");
-                Picasso.get().load(selectedImageUrl).into(imageView);  // 선택된 이미지 표시
+        // Firebase Storage에 저장될 이미지 이름 생성
+        String fileName = "GeneratedImage_" + new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date()) + ".jpg";
+        StorageReference imagesRef = storageRef.child("images/" + fileName);
+
+        // Bitmap을 JPEG로 압축한 후 바이트 배열로 변환
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
+        byte[] imageData = baos.toByteArray();
+
+        // Firebase Storage로 이미지 업로드
+        UploadTask uploadTask = imagesRef.putBytes(imageData);
+        uploadTask.addOnSuccessListener(taskSnapshot -> {
+            Toast.makeText(EditActivity.this, "Image uploaded to Firebase Storage", Toast.LENGTH_SHORT).show();
+        }).addOnFailureListener(e -> {
+            Toast.makeText(EditActivity.this, "Failed to upload image to Firebase Storage: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        });
+    }
+
+    private void saveImage() {
+        if (imageView.getDrawable() == null && drawingView.getDrawingBitmap() == null) {
+            Toast.makeText(this, "저장할 이미지가 없습니다.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // 필터가 적용된 비트맵을 가져옵니다
+        BitmapDrawable bitmapDrawable = (BitmapDrawable) imageView.getDrawable();
+        Bitmap bitmap = bitmapDrawable != null ? bitmapDrawable.getBitmap() : Bitmap.createBitmap(imageView.getWidth(), imageView.getHeight(), Bitmap.Config.ARGB_8888);
+
+        // `DrawView`에서 그린 그림을 비트맵으로 가져옵니다.
+        Bitmap drawingBitmap = drawingView.getDrawingBitmap();
+
+        // 비트맵에 그린 그림을 추가합니다
+        if (drawingBitmap != null) {
+            Canvas canvas = new Canvas(bitmap);
+            canvas.drawBitmap(drawingBitmap, 0, 0, null);
+        }
+
+        OutputStream fos;
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                ContentValues values = new ContentValues();
+                values.put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/MyApp");
+                values.put(MediaStore.Images.Media.IS_PENDING, true);
+                values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
+                values.put(MediaStore.Images.Media.DISPLAY_NAME, "edited_image_" + System.currentTimeMillis() + ".jpg");
+
+                Uri uri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+                fos = getContentResolver().openOutputStream(uri);
+
+                values.put(MediaStore.Images.Media.IS_PENDING, false);
+                getContentResolver().update(uri, values, null, null);
+            } else {
+                File directory = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES) + "/MyApp");
+                if (!directory.exists()) {
+                    directory.mkdirs();
+                }
+                File file = new File(directory, "edited_image_" + System.currentTimeMillis() + ".jpg");
+                fos = new FileOutputStream(file);
             }
+
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos);
+            fos.flush();
+            fos.close();
+
+            Toast.makeText(this, "이미지가 저장되었습니다.", Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            Toast.makeText(this, "이미지 저장에 실패했습니다.", Toast.LENGTH_SHORT).show();
+            e.printStackTrace();
         }
     }
-
-    // db 업로드 함수
-    private void uploadPost() {
-        if (selectedImageUrl != null) {
-            // Firebase Storage에서 선택된 이미지 URL을 직접 데이터베이스에 저장
-            savePostToDatabase(selectedImageUrl);
-        } else {
-            // 이미지가 없을 경우 null로 처리
-            savePostToDatabase(null);
-        }
-    }
-
-    private void savePostToDatabase(String imageUrl) {
-        String postId = postsRef.push().getKey();
-
-        Map<String, Object> post = new HashMap<>();
-        post.put("imageUrl", imageUrl);
-
-        if (postId != null) {
-            postsRef.child(postId).setValue(post)
-                    .addOnSuccessListener(new OnSuccessListener<Void>() {
-                        @Override
-                        public void onSuccess(Void aVoid) {
-                            Toast.makeText(EditActivity.this, "이미지 저장 성공.", Toast.LENGTH_SHORT).show();
-                            finish();  // 이미지 저장 후 종료
-                        }
-                    })
-                    .addOnFailureListener(new OnFailureListener() {
-                        @Override
-                        public void onFailure(@NonNull Exception e) {
-                            Toast.makeText(EditActivity.this, "이미지 업로드 실패", Toast.LENGTH_SHORT).show();
-                        }
-                    });
-        }
-    }
-
-
-
 
     // 필터 적용된 이미지와 사용자가 그린 그림을 결합
     private Bitmap mergeDrawingAndImage() {
@@ -236,8 +280,6 @@ public class EditActivity extends AppCompatActivity {
 
         return resultBitmap;
     }
-
-
 
     private void changeDrawingColor() {
         if (drawingView != null) {
