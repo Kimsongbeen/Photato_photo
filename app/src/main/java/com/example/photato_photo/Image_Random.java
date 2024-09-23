@@ -46,8 +46,6 @@ public class Image_Random extends AppCompatActivity{
     private Button generateButton;
     private Bitmap generatedImage;
     private  Button saveButton;
-    private String selectedImageUrl = null;
-    private DatabaseReference postsRef;
 
     private static final String[] NOUNS = {
             "a dragon", "snow", "moon", "light", "intricate", "elegant", "sharp focus", "beautiful dynamic",
